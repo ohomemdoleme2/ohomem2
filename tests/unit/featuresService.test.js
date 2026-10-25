@@ -133,6 +133,43 @@ test("feature diagnosis flags incomplete serverStats setup", async () => {
   );
 });
 
+test("feature diagnosis reports missing timeout permission for enabled moderation features", async () => {
+  const guild = {
+    id: "guild-1",
+    members: { me: { permissions: { has: () => false } } },
+    roles: { cache: new Map() },
+  };
+  const client = { channels: { fetch: async () => null } };
+
+  for (const feature of ["autoModeration", "antiSpam"]) {
+    const config =
+      feature === "autoModeration"
+        ? {
+            enabled: true,
+            bannedWordsPt: "termo",
+            bannedWordsEn: "",
+          }
+        : { enabled: true };
+    const diagnosis = await diagnoseFeature({
+      client,
+      guild,
+      feature,
+      config,
+    });
+
+    eq(diagnosis.status, "limited");
+    eq(
+      diagnosis.issues.some(
+        (issue) =>
+          issue.code === "permission_missing" &&
+          issue.permission === "ModerateMembers" &&
+          issue.partial === true,
+      ),
+      true,
+    );
+  }
+});
+
 test("gameNews accepts a one-minute global interval in milliseconds", () => {
   const res = applyPatch({
     patches: [{ path: "gameNews.interval", value: 60 * 1000 }],

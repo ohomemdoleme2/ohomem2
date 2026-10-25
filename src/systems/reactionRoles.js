@@ -49,6 +49,14 @@ function emojiMatches(configured, reactionEmoji) {
   return false;
 }
 
+function matchesConfiguredPanel(config, message) {
+  if (!config || !message) return false;
+  if (config.messageId) return String(message.id) === String(config.messageId);
+  return Boolean(
+    config.channelId && String(message.channelId) === String(config.channelId),
+  );
+}
+
 /**
  * Converte atalhos ":nome:" no formato "<:nome:id>" usando os emojis
  * personalizados do servidor. Emojis Unicode e "<:nome:id>" ficam inalterados.
@@ -101,6 +109,7 @@ function toReactable(configured) {
 
 module.exports = {
   emojiMatches,
+  matchesConfiguredPanel,
   toReactable,
   customEmojiParts,
   resolveShortcodes,

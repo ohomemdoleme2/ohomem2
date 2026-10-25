@@ -38,6 +38,24 @@ test("autoModeration does not inherit global thresholds or words", () => {
   eq(config.bypassChannelIds.length, 0);
 });
 
+test("autoModeration reads nested bannedWords config from the feature payload", () => {
+  const config = normalizeAutoModerationConfig({
+    enabled: true,
+    bannedWords: {
+      pt: ["merda"],
+      en: ["badword"],
+    },
+  });
+
+  eq(config.bannedWords.pt.includes("merda"), true);
+  eq(config.bannedWords.en.includes("badword"), true);
+  eq(
+    evaluateAutoModeration("This contains a BADWORD.", config, "nested-words")
+      .matchedWord,
+    "badword",
+  );
+});
+
 test("autoModeration bypasses configured channels before evaluating messages", () => {
   const config = normalizeAutoModerationConfig({
     bypassChannelIds: ["123456789012345678"],

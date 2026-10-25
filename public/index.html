@@ -186,7 +186,10 @@
                 class="discord-avatar hidden"
                 alt=""
               />
-              <span data-role="profile-label"></span>
+              <span class="profile-main">
+                <span data-role="profile-label"></span>
+                <span class="profile-meta" data-role="profile-meta"></span>
+              </span>
             </button>
             <div class="prefs-menu__panel hidden" id="prefsPanel" role="menu">
               <button
@@ -293,6 +296,50 @@
             <dd id="accountProfileScope">—</dd>
           </div>
         </dl>
+        <section
+          class="account-profile-preferences"
+          aria-labelledby="accountPreferencesTitle"
+        >
+          <h3 id="accountPreferencesTitle" data-i18n="profile_preferences">
+            Display preferences
+          </h3>
+          <div class="account-profile-preferences__row">
+            <div>
+              <span data-i18n="profile_theme">Theme</span>
+              <strong id="accountThemeValue">Dark</strong>
+            </div>
+            <button
+              type="button"
+              class="btn btn-ghost xs"
+              id="accountProfileThemeToggle"
+              aria-pressed="false"
+              data-i18n="pref_theme_toggle"
+            >
+              Theme
+            </button>
+          </div>
+          <div class="account-profile-preferences__row">
+            <div>
+              <span data-i18n="profile_density">Density</span>
+              <strong id="accountDensityValue">Comfortable</strong>
+            </div>
+            <button
+              type="button"
+              class="btn btn-ghost xs"
+              id="accountProfileDensityToggle"
+              aria-pressed="false"
+              data-i18n="pref_density_toggle"
+            >
+              Density
+            </button>
+          </div>
+          <p
+            class="hint account-profile-preferences__hint"
+            data-i18n="profile_preferences_hint"
+          >
+            Theme and density are saved in this browser and apply only to your dashboard session.
+          </p>
+        </section>
         <p class="hint" data-i18n="profile_discord_managed_hint">
           Email, password, and avatar are managed by Discord and cannot be
           changed here.

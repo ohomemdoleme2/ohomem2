@@ -21,6 +21,15 @@ window.OzarkLocales.pt = {
   profile_username: "Nome de utilizador",
   profile_discord_id: "ID do Discord",
   profile_access_level: "Nível de acesso",
+  profile_preferences: "Preferências visuais",
+  profile_preferences_hint:
+    "Tema e densidade são guardados neste navegador e aplicam-se apenas ao teu painel da dashboard.",
+  profile_theme: "Tema",
+  profile_theme_light: "Claro",
+  profile_theme_dark: "Escuro",
+  profile_density: "Densidade",
+  profile_density_compact: "Compacta",
+  profile_density_comfortable: "Confortável",
   profile_discord_managed_hint:
     "Email, palavra-passe e avatar são geridos pelo Discord e não podem ser alterados aqui.",
   profile_manage_discord: "Abrir conta Discord",
@@ -991,6 +1000,7 @@ window.OzarkLocales.pt = {
   features_diagnosis_status_ready: "Pronta",
   features_diagnosis_status_disabled: "Desativada",
   features_diagnosis_status_incomplete: "Configuração incompleta",
+  features_diagnosis_status_limited: "Ações limitadas",
   features_diagnosis_status_blocked: "Requer ação",
   features_diagnosis_status_error: "Não foi possível verificar",
   features_diagnosis_issue_missing_channel: "Seleciona um canal.",
@@ -1216,7 +1226,7 @@ window.OzarkLocales.pt = {
   features_test_send_confirm:
     "A configuração atual será guardada e será enviada uma mensagem de teste visível para o canal Discord configurado. Continuar?",
   features_test_reaction_roles_confirm:
-    "A configuração atual será guardada e será publicado um painel de teste interativo. Quem reagir poderá receber os cargos configurados. Continuar?",
+    "A configuração atual será guardada e serão adicionadas as reações em falta ao painel configurado. Quem reagir poderá receber os cargos configurados. Continuar?",
   features_test_stats_confirm:
     "A configuração atual será guardada e os canais de estatísticas serão atualizados no Discord. Continuar?",
   features_leave_unsaved_confirm:
@@ -1229,6 +1239,14 @@ window.OzarkLocales.pt = {
     "O auto-kick atua quando o interruptor está ligado.",
   features_test_info_reactionRolesUnresolved:
     "Há emojis que o bot não consegue usar. Usa o emoji copiado do Discord (⭐ ou <:emoji:id>).",
+  features_test_info_reactionRolesReactionFailed:
+    "O bot não conseguiu adicionar {failed} reação(ões) configurada(s) ao painel. Confirma as permissões do canal e o acesso aos emojis.",
+  features_test_reaction_roles_message_required:
+    "Indica o ID da mensagem do painel de cargos por reação antes de testar.",
+  features_test_reaction_roles_message_not_found:
+    "A mensagem do painel não foi encontrada no canal selecionado. Confirma o ID da mensagem.",
+  features_test_reaction_roles_channel_wrong_guild:
+    "O canal do painel selecionado não pertence ao servidor atual.",
   features_test_info_reactionRolesPermissions:
     'O bot não consegue atribuir um ou mais cargos: confirma a permissão "Gerir cargos" e que o cargo do bot está acima dos cargos configurados.',
 
@@ -1236,16 +1254,16 @@ window.OzarkLocales.pt = {
   features_presets: "Presets",
   features_preset_applied: "Preset preenchido. Revê e guarda a configuração.",
   features_configured: "Configurada",
-  features_inherited: "Herdado dos defaults globais",
+  features_uses_defaults: "Definições predefinidas",
   features_not_configured: "Não configurada",
   features_unsaved: "Alterações por guardar",
   features_setup_hint:
-    "Escolhe um preset ou preenche os campos e guarda. Depois podes ativar.",
+    "Escolhe um preset ou preenche os campos e guarda. Para funcionalidades com painel, publica a mensagem antes de ativar.",
   features_save_before_toggle:
     "Guarda as alterações antes de alterar o estado da funcionalidade.",
   features_preset_custom: "Personalizado",
   features_setup_incomplete:
-    "Preenche os campos obrigatórios e escolhe um preset ou Personalizado antes de guardar.",
+    "Preenche os campos obrigatórios e guarda primeiro. Para funcionalidades com painel, publica a mensagem antes de ativar.",
   features_advanced_settings: "Opções avançadas",
   preset_autokick_soft: "Suave (5)",
   preset_autokick_strict: "Rigoroso (3)",

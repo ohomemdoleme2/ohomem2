@@ -824,12 +824,30 @@
     }
 
     var profileLabel = elProfile.querySelector('[data-role="profile-label"]');
+    var profileMeta = elProfile.querySelector('[data-role="profile-meta"]');
     var profileAvatar = document.getElementById("badgeProfileAvatar");
     if (profileLabel) {
       profileLabel.textContent =
         me.role === "BOT_OWNER"
           ? t("profile_bot_owner")
           : me.username || "Discord";
+    }
+    if (profileMeta) {
+      if (state.guildId) {
+        profileMeta.textContent = t("scope_server", {
+          server: (state.guilds || []).find(function (guild) {
+            return guild && guild.id === state.guildId;
+          })?.name || state.guildId,
+        });
+      } else if (me.role === "BOT_OWNER") {
+        profileMeta.textContent = t("scope_global");
+      } else if (me.profile && me.profile !== "UNSCOPED") {
+        profileMeta.textContent = t("scope_server", {
+          server: t("access_select_guild"),
+        });
+      } else {
+        profileMeta.textContent = t("profile_viewer");
+      }
     }
     if (profileAvatar) {
       profileAvatar.classList.toggle("hidden", !me.avatarUrl);
@@ -992,32 +1010,55 @@
   }
 
   function updatePrefButtons() {
-    const themeBtn = document.getElementById("themeToggle");
-    if (themeBtn) {
-      const isLight = state.theme === "light";
-      const hint = t(isLight ? "pref_theme_to_dark" : "pref_theme_to_light");
-      themeBtn.setAttribute("aria-pressed", isLight ? "true" : "false");
-      themeBtn.setAttribute("title", hint);
-      themeBtn.setAttribute("aria-label", hint);
-    }
-
-    const densityBtn = document.getElementById("densityToggle");
-    if (densityBtn) {
-      const isCompact = state.density === "compact";
-      const hint = t(
-        isCompact ? "pref_density_to_comfortable" : "pref_density_to_compact",
+    const isLight = state.theme === "light";
+    const isCompact = state.density === "compact";
+    const themeHint = t(isLight ? "pref_theme_to_dark" : "pref_theme_to_light");
+    const densityHint = t(
+      isCompact ? "pref_density_to_comfortable" : "pref_density_to_compact",
+    );
+    ["themeToggle", "accountProfileThemeToggle"].forEach(function (id) {
+      const button = document.getElementById(id);
+      if (!button) return;
+      button.setAttribute("aria-pressed", isLight ? "true" : "false");
+      button.setAttribute("title", themeHint);
+      button.setAttribute("aria-label", themeHint);
+    });
+    ["densityToggle", "accountProfileDensityToggle"].forEach(function (id) {
+      const button = document.getElementById(id);
+      if (!button) return;
+      button.setAttribute("aria-pressed", isCompact ? "true" : "false");
+      button.setAttribute("title", densityHint);
+      button.setAttribute("aria-label", densityHint);
+    });
+    const themeValue = document.getElementById("accountThemeValue");
+    if (themeValue)
+      themeValue.textContent = t(
+        isLight ? "profile_theme_light" : "profile_theme_dark",
       );
-      densityBtn.setAttribute("aria-pressed", isCompact ? "true" : "false");
-      densityBtn.setAttribute("title", hint);
-      densityBtn.setAttribute("aria-label", hint);
-    }
+    const densityValue = document.getElementById("accountDensityValue");
+    if (densityValue)
+      densityValue.textContent = t(
+        isCompact
+          ? "profile_density_compact"
+          : "profile_density_comfortable",
+      );
   }
 
   function initPreferences() {
     const themeBtn = document.getElementById("themeToggle");
     if (themeBtn) themeBtn.addEventListener("click", toggleTheme);
+    const accountThemeBtn = document.getElementById(
+      "accountProfileThemeToggle",
+    );
+    if (accountThemeBtn)
+      accountThemeBtn.addEventListener("click", toggleTheme);
     const densityBtn = document.getElementById("densityToggle");
     if (densityBtn) densityBtn.addEventListener("click", toggleDensity);
+    const accountDensityBtn = document.getElementById(
+      "accountProfileDensityToggle",
+    );
+    if (accountDensityBtn)
+      accountDensityBtn.addEventListener("click", toggleDensity);
     const dashboardBtn = document.getElementById("adminMenuDashboard");
     if (dashboardBtn)
       dashboardBtn.addEventListener("click", function () {
@@ -1159,31 +1200,8 @@
 
     if (
       name === "premium-admin" &&
-      state.me &&
-      state.me.role === "BOT_OWNER" &&
-      state.guildId
+      (!state.me || state.me.role !== "BOT_OWNER" || state.guildId)
     ) {
-      var previousGuildId = state.guildId;
-      state.guildId = null;
-      ensureGuildScopedToken(null)
-        .then(function (ok) {
-          if (!ok) {
-            state.guildId = previousGuildId;
-            updateTabAccess();
-            return;
-          }
-          try {
-            localStorage.removeItem(GUILD_KEY);
-          } catch {}
-          var picker = document.getElementById("guildPicker");
-          if (picker) picker.value = "";
-          updateTabAccess();
-          setTab(name);
-        })
-        .catch(function () {
-          state.guildId = previousGuildId;
-          updateTabAccess();
-        });
       return;
     }
 
@@ -1201,13 +1219,6 @@
       if (section) section.classList.add("active");
       applyTabButtonState("overview");
       return;
-    }
-    if (
-      name === "premium-admin" &&
-      !(state.me && state.me.role === "BOT_OWNER")
-    ) {
-      state.currentTab = "overview";
-      name = "overview";
     }
     state.currentTab = name;
 
@@ -1428,7 +1439,11 @@
       user: requiresPerms && canActOnCases,
       features: requiresPerms && canViewConfig,
       config: requiresPerms && canViewConfig,
-      "premium-admin": !!(state.me && state.me.role === "BOT_OWNER"),
+      "premium-admin": !!(
+        state.me &&
+        state.me.role === "BOT_OWNER" &&
+        !hasGuild
+      ),
     };
 
     const tabs = ["logs", "features", "user", "config", "premium-admin"];
@@ -1996,8 +2011,13 @@
         select.appendChild(opt);
       });
 
-      // Restore the last selected guild for every profile when it is still allowed.
-      if (!state.guildId) {
+      // Bot owners always start in Global; other profiles restore a permitted server.
+      if (isBotOwner) {
+        state.guildId = null;
+        try {
+          localStorage.removeItem(GUILD_KEY);
+        } catch {}
+      } else if (!state.guildId) {
         var stored = getStoredGuildId();
         if (
           stored &&
@@ -2011,17 +2031,13 @@
         }
       }
 
-      // Bot owners default to Global; server admins can auto-select one guild.
+      // Auto-select only when there is a single eligible server; otherwise keep
+      // the user in the server chooser so the selection stays explicit.
       const manageableGuilds = items.filter(function (guild) {
         return guild && guild.manageable;
       });
-      if (
-        !isBotOwner &&
-        !state.guildId &&
-        manageableGuilds.length === 1 &&
-        manageableGuilds[0].id
-      ) {
-        state.guildId = manageableGuilds[0].id;
+      if (!isBotOwner && !state.guildId && manageableGuilds.length === 1) {
+        state.guildId = manageableGuilds[0].id || null;
         setStoredGuildId(state.guildId);
       }
 
@@ -2075,13 +2091,14 @@
           );
         }
       } else {
-        // Server admins with multiple eligible guilds must choose one. Bot owners stay Global.
+        // Bot owners stay Global; non-owners with multiple eligible servers must
+        // choose one explicitly before the dashboard unlocks server tabs.
+        updateTabAccess();
         if (!isBotOwner && manageableGuilds.length > 1) {
           try {
             window.OzarkDashboard.showGuildSelect(manageableGuilds);
           } catch {}
         }
-        updateTabAccess();
         try {
           refreshGlobalBanner();
         } catch {}
@@ -4205,6 +4222,14 @@
             return;
           }
           state.guildId = v || null;
+          if (
+            state.guildId &&
+            state.me &&
+            state.me.role === "BOT_OWNER" &&
+            state.currentTab === "premium-admin"
+          ) {
+            state.currentTab = "overview";
+          }
           try {
             if (
               window.OzarkDashboard &&
@@ -4686,7 +4711,11 @@
       if (!guildSelectScreen || !guildSelectList) return;
       if (guildSelectPremiumAdmin) {
         var isBotOwner = state.me && state.me.role === "BOT_OWNER";
-        guildSelectPremiumAdmin.classList.toggle("hidden", !isBotOwner);
+        var hasActiveGuildScope = !!(state.guildId && String(state.guildId).trim());
+        guildSelectPremiumAdmin.classList.toggle(
+          "hidden",
+          !isBotOwner || hasActiveGuildScope,
+        );
       }
       if (!Array.isArray(items) || items.length < 2) {
         guildSelectScreen.classList.add("hidden");

@@ -1,9 +1,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { FEATURE_DEFAULTS } = require("../../src/systems/featuresService");
 const {
   registerFeaturesRoutes,
 } = require("../../src/dashboard/routes/features");
-const { FEATURE_DEFAULTS } = require("../../src/systems/featuresService");
 const { startApp, stopApp, passthrough, sanitizeId } = require("./_helpers");
 
 test("feature updates are recorded without including custom message content", async () => {
@@ -35,7 +35,11 @@ test("feature updates are recorded without including custom message content", as
       body: JSON.stringify({
         guildId: "123456789012345678",
         feature: "welcome",
-        value: { enabled: true, message: "custom welcome message" },
+        value: {
+          enabled: true,
+          channelId: "111111111111111111",
+          message: "custom welcome message",
+        },
       }),
     });
     assert.equal(response.status, 200);
@@ -43,6 +47,51 @@ test("feature updates are recorded without including custom message content", as
     assert.equal(auditEntry.guildId, "123456789012345678");
     assert.equal(auditEntry.actor, "guild-admin");
     assert.deepEqual(auditEntry.payload, { feature: "welcome", enabled: true });
+  } finally {
+    await stopApp(app.server);
+  }
+});
+
+test("enabled features reject incomplete setup but can be saved disabled", async () => {
+  let writes = 0;
+  const app = await startApp(registerFeaturesRoutes, {
+    requireDashboardAuth: passthrough,
+    requirePerm: () => passthrough,
+    requireGuildAccess: () => passthrough,
+    sanitizeId,
+    GuildConfig: {
+      findOneAndUpdate() {
+        writes++;
+        return { lean: async () => ({}) };
+      },
+    },
+    getClient: () => null,
+  });
+
+  async function saveWelcome(enabled) {
+    return fetch(app.baseUrl + "/api/features", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        guildId: "123456789012345678",
+        feature: "welcome",
+        value: { enabled, message: "Welcome!" },
+      }),
+    });
+  }
+
+  try {
+    const enabledResponse = await saveWelcome(true);
+    assert.equal(enabledResponse.status, 400);
+    assert.equal(
+      (await enabledResponse.json()).error,
+      "FEATURE_CONFIGURATION_INCOMPLETE",
+    );
+    assert.equal(writes, 0);
+
+    const disabledResponse = await saveWelcome(false);
+    assert.equal(disabledResponse.status, 200);
+    assert.equal(writes, 1);
   } finally {
     await stopApp(app.server);
   }
@@ -270,6 +319,15 @@ test("memes and Twitch feature updates are normalized before persistence", async
   }
 
   try {
+    const autoKickResponse = await updateFeature("autoKick", {
+      enabled: true,
+    });
+    assert.equal(autoKickResponse.status, 200);
+    assert.equal(
+      (await autoKickResponse.json()).value.infractionsToKick,
+      FEATURE_DEFAULTS.autoKick.infractionsToKick,
+    );
+
     const memesResponse = await updateFeature("memes", {
       enabled: true,
       channelId: "123456789012345678",
@@ -281,7 +339,8 @@ test("memes and Twitch feature updates are normalized before persistence", async
       channelId: "123456789012345678",
       intervalMinutes: 15,
     });
-    assert.equal(updates[0].update.$addToSet.featuresConfigured, "memes");
+    assert.equal(updates[0].update.$addToSet.featuresConfigured, "autoKick");
+    assert.equal(updates[1].update.$addToSet.featuresConfigured, "memes");
 
     const twitchResponse = await updateFeature("twitch", {
       enabled: true,
@@ -296,8 +355,8 @@ test("memes and Twitch feature updates are normalized before persistence", async
       channelId: "123456789012345678",
       roleId: "987654321098765432",
     });
-    assert.equal(updates[1].update.$addToSet.featuresConfigured, "twitch");
-    assert.equal(updates.length, 2);
+    assert.equal(updates[2].update.$addToSet.featuresConfigured, "twitch");
+    assert.equal(updates.length, 3);
   } finally {
     await stopApp(app.server);
   }

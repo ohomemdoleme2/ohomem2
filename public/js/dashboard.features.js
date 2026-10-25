@@ -1111,6 +1111,9 @@
     incomplete: function () {
       return t("features_diagnosis_status_incomplete");
     },
+    limited: function () {
+      return t("features_diagnosis_status_limited");
+    },
     blocked: function () {
       return t("features_diagnosis_status_blocked");
     },
@@ -1409,11 +1412,11 @@
 
   function cardHtml(feature) {
     var isConfigured = configuredFeatures[feature.key] === true;
-    var isInherited =
+    var usesDefaults =
       (feature.key === "antiSpam" || feature.key === "autoModeration") &&
       !isConfigured;
     var v =
-      isConfigured || isInherited
+      isConfigured || usesDefaults
         ? current[feature.key] || {}
         : { enabled: false };
     var enabled = v.enabled === true;
@@ -1488,20 +1491,19 @@
           "</div>"
         : "";
 
+    var configStateKey = isConfigured
+      ? "features_configured"
+      : usesDefaults
+        ? "features_uses_defaults"
+        : "features_not_configured";
     var configStateHtml =
-      '<span class="feature-card__config-state" data-role="config-state">' +
-      esc(
-        t(
-          isConfigured
-            ? "features_configured"
-            : isInherited
-              ? "features_inherited"
-              : "features_not_configured",
-        ),
-      ) +
+      '<span class="feature-card__config-state" data-role="config-state" data-config-state="' +
+      esc(configStateKey) +
+      '">' +
+      esc(t(configStateKey)) +
       "</span>";
     var setupHintHtml =
-      isConfigured || isInherited
+      isConfigured || usesDefaults
         ? ""
         : '<p class="hint" data-role="setup-hint">' +
           esc(t("features_setup_hint")) +
@@ -1813,24 +1815,24 @@
     var state = card.querySelector('[data-role="config-state"]');
     var setupHint = card.querySelector('[data-role="setup-hint"]');
     var isConfigured = configuredFeatures[key] === true;
-    var isInherited =
+    var usesDefaults =
       (key === "antiSpam" || key === "autoModeration") && !isConfigured;
     var isDirty = card.getAttribute("data-dirty") === "true";
     if (state) {
-      state.textContent = t(
-        isDirty
-          ? "features_unsaved"
-          : isConfigured
-            ? "features_configured"
-            : isInherited
-              ? "features_inherited"
-              : "features_not_configured",
-      );
+      var configStateKey = isDirty
+        ? "features_unsaved"
+        : isConfigured
+          ? "features_configured"
+          : usesDefaults
+            ? "features_uses_defaults"
+            : "features_not_configured";
+      state.textContent = t(configStateKey);
+      state.setAttribute("data-config-state", configStateKey);
     }
     if (setupHint)
       setupHint.classList.toggle(
         "hidden",
-        isConfigured || isInherited || isDirty,
+        isConfigured || usesDefaults || isDirty,
       );
   }
 
@@ -2219,6 +2221,8 @@
         t(
           err && err.apiMessage === "PREMIUM_REQUIRED"
             ? "premium_lock_hint"
+            : err && err.apiMessage === "FEATURE_CONFIGURATION_INCOMPLETE"
+              ? "features_setup_incomplete"
             : "features_save_error",
         ),
         { type: "error" },
@@ -2275,7 +2279,9 @@
         ? "features_test_info_" + res.info
         : "features_test_ok";
       if (statusEl) statusEl.textContent = t(infoKey, res.data || {});
-      notify(t(infoKey, res.data || {}), { type: "success" });
+      notify(t(infoKey, res.data || {}), {
+        type: res.info === "reactionRolesReactionFailed" ? "warn" : "success",
+      });
     } catch (err) {
       console.error("Feature test error", err);
       if (statusEl) statusEl.textContent = "";
@@ -2284,6 +2290,12 @@
           ? "premium_lock_hint"
           : err && err.apiMessage === "TWITCH_CREDENTIALS_MISSING"
             ? "features_twitch_credentials_missing"
+            : err && err.apiMessage === "MESSAGE_REQUIRED"
+              ? "features_test_reaction_roles_message_required"
+              : err && err.apiMessage === "MESSAGE_NOT_FOUND"
+                ? "features_test_reaction_roles_message_not_found"
+                : err && err.apiMessage === "CHANNEL_NOT_FOUND"
+                  ? "features_test_reaction_roles_channel_wrong_guild"
             : "features_test_error";
       notify(t(errorKey), { type: "error" });
     } finally {

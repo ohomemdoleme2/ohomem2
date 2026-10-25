@@ -122,24 +122,36 @@ async function runFeatureTest({ client, guild, feature, config, testMessage }) {
       if (!channel) return { ok: false, error: "CHANNEL_REQUIRED" };
       const entries = Array.isArray(c.entries) ? c.entries : [];
       if (!entries.length) return { ok: false, error: "ENTRIES_REQUIRED" };
-
-      const embed = new EmbedBuilder()
-        .setTitle("Teste — cargos por reação")
-        .setDescription("Reage a esta mensagem com os emojis configurados.");
-      const message = await channel.send({ embeds: [embed] });
+      if (!c.messageId || !channel.messages?.fetch)
+        return { ok: false, error: "MESSAGE_REQUIRED" };
+      const message = await channel.messages.fetch(c.messageId).catch(() => null);
+      if (!message || String(message.channelId) !== String(channel.id))
+        return { ok: false, error: "MESSAGE_NOT_FOUND" };
+      if (!guild || String(channel.guildId) !== String(guild.id))
+        return { ok: false, error: "CHANNEL_NOT_FOUND" };
 
       const { toReactable } = require("./reactionRoles");
       let unresolved = 0;
+      let failed = 0;
       for (const entry of entries) {
         const reactable = toReactable(entry && entry.emoji);
         if (!reactable) {
           unresolved += 1;
           continue;
         }
-        await message.react(reactable).catch(() => null);
+        try {
+          await message.react(reactable);
+        } catch {
+          failed += 1;
+        }
       }
 
-      // Diagnóstico: sem isto uma falha de permissões/hierarquia era silenciosa.
+      if (failed)
+        return {
+          ok: true,
+          info: "reactionRolesReactionFailed",
+          data: { failed },
+        };
       if (unresolved)
         return {
           ok: true,
@@ -222,43 +234,22 @@ async function runFeatureTest({ client, guild, feature, config, testMessage }) {
     case "tickets": {
       const channel = await fetchSendable(client, c.channelId);
       if (!channel) return { ok: false, error: "CHANNEL_REQUIRED" };
-      const lang = await getGuildLang(guild.id);
-      const title = await getFeatureText({
-        guildId: guild.id,
-        feature: "tickets",
-        field: "panelTitle",
-        value: c.panelTitle,
-        lang,
-      });
-      const description = await getFeatureText({
-        guildId: guild.id,
-        feature: "tickets",
-        field: "panelDescription",
-        value: c.panelDescription,
-        params: { emoji: c.openEmoji || "🎫" },
-        lang,
-      });
-      const footer = await getFeatureText({
-        guildId: guild.id,
-        feature: "tickets",
-        field: "panelFooter",
-        lang,
-      });
-      const now = new Date();
-      const footerText = [footer, formatPanelDate(lang, now)]
-        .filter(Boolean)
-        .join(" • ");
-      const embed = new EmbedBuilder()
-        .setTitle(title)
-        .setDescription(
-          applyTemplate(description, { emoji: c.openEmoji || "🎫" }),
-        )
-        .setFooter({ text: footerText })
-        .setTimestamp(now);
-      const message = await channel.send({ embeds: [embed] });
+      if (!c.messageId || !channel.messages?.fetch)
+        return { ok: false, error: "MESSAGE_REQUIRED" };
+      const message = await channel.messages.fetch(c.messageId).catch(() => null);
+      if (!message || String(message.channelId) !== String(channel.id))
+        return { ok: false, error: "MESSAGE_NOT_FOUND" };
+      if (!guild || String(channel.guildId) !== String(guild.id))
+        return { ok: false, error: "CHANNEL_NOT_FOUND" };
+
       const { toReactable } = require("./reactionRoles");
       const reactable = toReactable(c.openEmoji || "🎫");
-      if (reactable) await message.react(reactable).catch(() => null);
+      if (!reactable) return { ok: false, error: "TICKET_EMOJI_INVALID" };
+      try {
+        await message.react(reactable);
+      } catch {
+        return { ok: false, error: "REACTION_FAILED" };
+      }
       return { ok: true };
     }
 

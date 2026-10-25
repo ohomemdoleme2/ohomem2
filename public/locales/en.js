@@ -21,6 +21,15 @@ window.OzarkLocales.en = {
   profile_username: "Username",
   profile_discord_id: "Discord ID",
   profile_access_level: "Access level",
+  profile_preferences: "Display preferences",
+  profile_preferences_hint:
+    "Theme and density are saved in this browser and apply only to your dashboard session.",
+  profile_theme: "Theme",
+  profile_theme_light: "Light",
+  profile_theme_dark: "Dark",
+  profile_density: "Density",
+  profile_density_compact: "Compact",
+  profile_density_comfortable: "Comfortable",
   profile_discord_managed_hint:
     "Email, password, and avatar are managed by Discord and cannot be changed here.",
   profile_manage_discord: "Open Discord account",
@@ -964,6 +973,7 @@ window.OzarkLocales.en = {
   features_diagnosis_status_ready: "Ready",
   features_diagnosis_status_disabled: "Disabled",
   features_diagnosis_status_incomplete: "Incomplete configuration",
+  features_diagnosis_status_limited: "Limited actions",
   features_diagnosis_status_blocked: "Action required",
   features_diagnosis_status_error: "Could not check setup",
   features_diagnosis_issue_missing_channel: "Select a channel.",
@@ -1184,7 +1194,7 @@ window.OzarkLocales.en = {
   features_test_send_confirm:
     "This will save the current settings and send a visible test message to the configured Discord channel. Continue?",
   features_test_reaction_roles_confirm:
-    "This will save the current settings and publish an interactive test panel. Members who react may receive configured roles. Continue?",
+    "This will save the current settings and add missing reactions to the configured panel. Members who react may receive configured roles. Continue?",
   features_test_stats_confirm:
     "This will save the current settings and update the configured server statistics channels in Discord. Continue?",
   features_leave_unsaved_confirm:
@@ -1196,6 +1206,14 @@ window.OzarkLocales.en = {
   features_test_info_autoKick: "Auto-kick acts while the switch is on.",
   features_test_info_reactionRolesUnresolved:
     "Some emojis cannot be used by the bot. Paste the emoji copied from Discord (⭐ or <:emoji:id>).",
+  features_test_info_reactionRolesReactionFailed:
+    "The bot could not add {failed} configured reaction(s) to the panel. Check its channel permissions and emoji access.",
+  features_test_reaction_roles_message_required:
+    "Set the message ID of the reaction roles panel before testing.",
+  features_test_reaction_roles_message_not_found:
+    "The configured panel message was not found in the selected channel. Check the message ID.",
+  features_test_reaction_roles_channel_wrong_guild:
+    "The selected panel channel does not belong to the current server.",
   features_test_info_reactionRolesPermissions:
     'The bot cannot assign one or more roles: check the "Manage Roles" permission and that the bot role is above the configured roles.',
 
@@ -1203,16 +1221,16 @@ window.OzarkLocales.en = {
   features_presets: "Presets",
   features_preset_applied: "Preset added to the form. Review and save it.",
   features_configured: "Configured",
-  features_inherited: "Inherited from global defaults",
+  features_uses_defaults: "Default settings",
   features_not_configured: "Not configured",
   features_unsaved: "Unsaved changes",
   features_setup_hint:
-    "Choose a preset or fill in the fields, then save. You can enable it afterward.",
+    "Choose a preset or fill in the fields, then save. For panel-based features, publish the message before enabling it.",
   features_save_before_toggle:
     "Save your changes before changing the feature state.",
   features_preset_custom: "Custom",
   features_setup_incomplete:
-    "Complete the required fields and choose a preset or Custom before saving.",
+    "Complete the required fields and save first. For panel-based features, publish the message before enabling it.",
   features_advanced_settings: "Advanced options",
   preset_autokick_soft: "Soft (5)",
   preset_autokick_strict: "Strict (3)",

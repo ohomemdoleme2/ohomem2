@@ -92,6 +92,11 @@ body {
   flex-wrap: nowrap;
 }
 
+.topbar-right .select {
+  min-width: 210px;
+  max-width: 280px;
+}
+
 /* Badges in the topbar should never wrap or truncate */
 .topbar-right .badge {
   white-space: nowrap;
@@ -231,6 +236,25 @@ body {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
+}
+
+.profile-main {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+}
+
+.profile-meta {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  color: var(--text-muted);
+}
+
+.badge-bot-owner .profile-meta {
+  color: #f2c75c;
 }
 
 .discord-avatar {
@@ -2194,6 +2218,13 @@ h2 {
   white-space: nowrap;
 }
 
+#badgeProfile {
+  padding-inline: 10px;
+  min-height: 36px;
+  border-color: var(--white-12);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+}
+
 .badge-bot-owner {
   border-color: #d5a83f;
   background: rgba(213, 168, 63, 0.16);
@@ -2226,6 +2257,8 @@ h2 {
   align-items: center;
   justify-content: center;
   gap: var(--sp-1);
+  min-height: 36px;
+  padding-inline: 10px;
 }
 
 .prefs-menu__icon {
@@ -3928,6 +3961,10 @@ details[open] > .details-summary:before {
   padding-right: 4px;
 }
 
+.guild-select-list .guild-select-item {
+  background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02));
+}
+
 .guild-select-item {
   display: flex;
   align-items: center;
@@ -4889,6 +4926,7 @@ summary:focus-visible,
   color: var(--text-muted);
 }
 .feature-diagnosis[data-status="blocked"] .feature-diagnosis__status,
+.feature-diagnosis[data-status="limited"] .feature-diagnosis__status,
 .feature-diagnosis[data-status="incomplete"] .feature-diagnosis__status {
   color: var(--warning);
 }
@@ -4958,6 +4996,26 @@ summary:focus-visible,
   background: var(--white-2);
   font-size: var(--fs-xs);
   color: var(--text-muted);
+}
+.feature-card__config-state[data-config-state="features_configured"] {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--success, #4ade80);
+}
+.feature-card__config-state[data-config-state="features_uses_defaults"] {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warning, #fbbf24);
+}
+.feature-card__config-state[data-config-state="features_not_configured"] {
+  border-color: var(--border-soft);
+  background: var(--white-2);
+  color: var(--text-muted);
+}
+.feature-card__config-state[data-config-state="features_unsaved"] {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.08);
+  color: var(--warning, #fbbf24);
 }
 .feature-card[data-dirty="true"] .feature-card__config-state {
   border-color: var(--warning);
@@ -6068,6 +6126,48 @@ summary:focus-visible,
 .account-profile-details #accountProfileId {
   font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
+}
+
+.account-profile-preferences {
+  margin: var(--sp-4) 0;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border-soft);
+}
+
+.account-profile-preferences h3 {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-sm);
+}
+
+.account-profile-preferences__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: 44px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.account-profile-preferences__row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.account-profile-preferences__row > div > span {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.account-profile-preferences__row strong {
+  font-weight: var(--fw-semibold);
+}
+
+.account-profile-preferences__hint {
+  margin-top: var(--sp-2);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
 }
 
 .account-profile-dialog > .hint {

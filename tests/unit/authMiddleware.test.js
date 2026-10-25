@@ -158,6 +158,21 @@ test("decodeDashboardToken does not promote the built-in owner when overridden",
   }
 });
 
+test("decodeDashboardToken grants ownership only to the first configured owner ID", async () => {
+  const previousBotOwnerIds = process.env.BOT_OWNER_IDS;
+  process.env.BOT_OWNER_IDS = "234567890123456789,345678901234567890";
+  try {
+    const { decodeDashboardToken } = makeMw({
+      payload: { t: "oauth", sub: "345678901234567890" },
+    });
+    const user = await decodeDashboardToken("token");
+    eq(user.role, "USER");
+  } finally {
+    if (previousBotOwnerIds === undefined) delete process.env.BOT_OWNER_IDS;
+    else process.env.BOT_OWNER_IDS = previousBotOwnerIds;
+  }
+});
+
 test("decodeDashboardToken recognizes a legacy configured owner for session migration", async () => {
   const previousBotOwnerIds = process.env.BOT_OWNER_IDS;
   process.env.BOT_OWNER_IDS = "234567890123456789";

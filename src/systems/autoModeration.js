@@ -29,6 +29,11 @@ function wordLines(value) {
 
 function normalizeAutoModerationConfig(featureConfig) {
   const feature = featureConfig || {};
+  const nestedWords =
+    feature && typeof feature === "object" && feature.bannedWords
+      ? feature.bannedWords
+      : {};
+
   function normalizeIdList(value) {
     if (!Array.isArray(value)) return [];
     return Array.from(
@@ -39,6 +44,7 @@ function normalizeAutoModerationConfig(featureConfig) {
       ),
     );
   }
+
   return {
     enabled: feature.enabled === true,
     maxWarnings: Number(feature.maxWarnings) || 3,
@@ -46,8 +52,8 @@ function normalizeAutoModerationConfig(featureConfig) {
     bypassRoleIds: normalizeIdList(feature.bypassRoleIds),
     bypassChannelIds: normalizeIdList(feature.bypassChannelIds),
     bannedWords: {
-      pt: wordLines(feature.bannedWordsPt),
-      en: wordLines(feature.bannedWordsEn),
+      pt: wordLines(feature.bannedWordsPt ?? nestedWords.pt ?? []),
+      en: wordLines(feature.bannedWordsEn ?? nestedWords.en ?? []),
     },
   };
 }
@@ -206,18 +212,6 @@ module.exports = async function autoModeration(message, client) {
     const lang = await require("./i18n").getGuildLang(guild.id);
 
     const trustCfg = await getGuildTrustConfig(guild.id);
-
-    if (
-      message.member.permissions.has(PermissionsBitField.Flags.Administrator)
-    ) {
-      return;
-    }
-
-    if (
-      message.member.roles.highest.position >= botMember.roles.highest.position
-    ) {
-      return;
-    }
 
     const baseMaxWarnings = autoConfig.maxWarnings;
     const baseMuteDuration = autoConfig.muteDuration;

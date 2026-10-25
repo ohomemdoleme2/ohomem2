@@ -102,25 +102,22 @@ function isEmptyFeatureValue(value) {
   );
 }
 
-async function diagnoseFeature({ client, guild, feature, config }) {
+function getFeatureSetupIssues(feature, value) {
   const issues = [];
-  const addIssue = (code, details = {}) => issues.push({ code, ...details });
-  const value = config || {};
-
   for (const field of REQUIRED_FEATURE_FIELDS[feature] || []) {
     if (isEmptyFeatureValue(value[field])) {
-      addIssue(FEATURE_FIELD_ISSUES[field] || "missing_configuration", {
+      issues.push({
+        code: FEATURE_FIELD_ISSUES[field] || "missing_configuration",
         field,
       });
     }
   }
   if (
     feature === "autoModeration" &&
-    value.enabled === true &&
     !String(value.bannedWordsPt || "").trim() &&
     !String(value.bannedWordsEn || "").trim()
   ) {
-    addIssue("missing_automod_rules", { field: "bannedWordsEn" });
+    issues.push({ code: "missing_automod_rules", field: "bannedWordsEn" });
   }
   if (
     feature === "serverStats" &&
@@ -128,8 +125,15 @@ async function diagnoseFeature({ client, guild, feature, config }) {
     value.showJoins !== true &&
     value.showLeaves !== true
   ) {
-    addIssue("missing_stats_metric");
+    issues.push({ code: "missing_stats_metric" });
   }
+  return issues;
+}
+
+async function diagnoseFeature({ client, guild, feature, config }) {
+  const value = config || {};
+  const issues = getFeatureSetupIssues(feature, value);
+  const addIssue = (code, details = {}) => issues.push({ code, ...details });
   if (
     feature === "twitch" &&
     (!process.env.TWITCH_CLIENT_ID || !process.env.TWITCH_CLIENT_SECRET)
@@ -140,12 +144,19 @@ async function diagnoseFeature({ client, guild, feature, config }) {
   let member = guild.members && guild.members.me;
   const needsGuildPermissions =
     {
+      autoModeration: ["ModerateMembers"],
+      antiSpam: ["ModerateMembers"],
       autoKick: ["KickMembers"],
       reactionRoles: ["ManageRoles"],
       verification: ["ManageRoles"],
       serverStats: ["ManageChannels"],
     }[feature] || [];
-  if (feature === "verification" && Number(value.kickAfterMinutes) > 0) {
+  if (value.enabled !== true) needsGuildPermissions.length = 0;
+  if (
+    value.enabled === true &&
+    feature === "verification" &&
+    Number(value.kickAfterMinutes) > 0
+  ) {
     needsGuildPermissions.push("KickMembers");
   }
   const needsRoleHierarchy =
@@ -172,7 +183,12 @@ async function diagnoseFeature({ client, guild, feature, config }) {
     for (const permissionName of needsGuildPermissions) {
       const flag = PermissionsBitField.Flags[permissionName];
       if (flag && !member.permissions.has(flag)) {
-        addIssue("permission_missing", { permission: permissionName });
+        addIssue("permission_missing", {
+          permission: permissionName,
+          partial:
+            permissionName === "ModerateMembers" &&
+            (feature === "autoModeration" || feature === "antiSpam"),
+        });
       }
     }
   }
@@ -231,16 +247,20 @@ async function diagnoseFeature({ client, guild, feature, config }) {
     }
   }
 
-  const hasPermissionIssue = issues.some((issue) =>
-    [
-      "permission_missing",
+  const hasBlockingIssue = issues.some((issue) =>
+    issue.code === "permission_missing"
+      ? issue.partial !== true
+      : [
       "role_unavailable",
       "role_not_manageable",
       "channel_unavailable",
       "channel_permissions_unavailable",
       "bot_member_unavailable",
       "missing_twitch_credentials",
-    ].includes(issue.code),
+        ].includes(issue.code),
+  );
+  const hasPartialPermissionIssue = issues.some(
+    (issue) => issue.code === "permission_missing" && issue.partial === true,
   );
   const hasConfigIssue = issues.some((issue) =>
     issue.code.startsWith("missing_"),
@@ -248,11 +268,13 @@ async function diagnoseFeature({ client, guild, feature, config }) {
   const status =
     value.enabled !== true
       ? "disabled"
-      : hasPermissionIssue
+      : hasBlockingIssue
         ? "blocked"
-        : hasConfigIssue
-          ? "incomplete"
-          : "ready";
+        : hasPartialPermissionIssue
+          ? "limited"
+          : hasConfigIssue
+            ? "incomplete"
+            : "ready";
 
   return { feature, status, issues, checkedAt: new Date().toISOString() };
 }
@@ -326,6 +348,7 @@ function urlOrNull(v, max) {
  */
 function cleanFeatureValue(name, raw, sanitizeId) {
   const src = raw && typeof raw === "object" ? raw : {};
+  const defaults = FEATURE_DEFAULTS[name] || {};
   const id = (v) => {
     const s = sanitizeId(String(v === null || v === undefined ? "" : v));
     return s || null;
@@ -337,7 +360,6 @@ function cleanFeatureValue(name, raw, sanitizeId) {
 
   switch (name) {
     case "autoModeration": {
-      const defaults = FEATURE_DEFAULTS.autoModeration;
       return {
         enabled:
           src.enabled === undefined ? defaults.enabled : toBool(src.enabled),
@@ -362,7 +384,6 @@ function cleanFeatureValue(name, raw, sanitizeId) {
     }
 
     case "antiSpam": {
-      const defaults = FEATURE_DEFAULTS.antiSpam;
       const rawSimilarity =
         src.similarityThreshold === null ||
         src.similarityThreshold === undefined ||
@@ -426,7 +447,9 @@ function cleanFeatureValue(name, raw, sanitizeId) {
         enabled: toBool(src.enabled),
         channelId: id(src.channelId),
         ignoreBots:
-          src.ignoreBots === undefined ? true : toBool(src.ignoreBots),
+          src.ignoreBots === undefined
+            ? defaults.ignoreBots
+            : toBool(src.ignoreBots),
       };
 
     case "reactionRoles": {
@@ -452,15 +475,25 @@ function cleanFeatureValue(name, raw, sanitizeId) {
     case "autoKick":
       return {
         enabled: toBool(src.enabled),
-        infractionsToKick: toInt(src.infractionsToKick, 5, 1, 100),
+        infractionsToKick: toInt(
+          src.infractionsToKick,
+          defaults.infractionsToKick,
+          1,
+          100,
+        ),
       };
 
     case "levels":
       return {
         enabled: toBool(src.enabled),
-        xpMin: toInt(src.xpMin, 15, 1, 1000),
-        xpMax: toInt(src.xpMax, 25, 1, 1000),
-        cooldownSeconds: toInt(src.cooldownSeconds, 60, 0, 86400),
+        xpMin: toInt(src.xpMin, defaults.xpMin, 1, 1000),
+        xpMax: toInt(src.xpMax, defaults.xpMax, 1, 1000),
+        cooldownSeconds: toInt(
+          src.cooldownSeconds,
+          defaults.cooldownSeconds,
+          0,
+          86400,
+        ),
         announceChannelId: id(src.announceChannelId),
       };
 
@@ -468,11 +501,11 @@ function cleanFeatureValue(name, raw, sanitizeId) {
       return {
         enabled: toBool(src.enabled),
         channelId: id(src.channelId),
-        threshold: toInt(src.threshold, 3, 1, 100),
+        threshold: toInt(src.threshold, defaults.threshold, 1, 100),
         emoji:
           typeof src.emoji === "string" && src.emoji.trim()
             ? src.emoji.trim().slice(0, 64)
-            : "⭐",
+            : defaults.emoji,
       };
 
     case "polls":
@@ -484,7 +517,12 @@ function cleanFeatureValue(name, raw, sanitizeId) {
         roleId: id(src.roleId),
         channelId: id(src.channelId),
         messageId: id(src.messageId),
-        kickAfterMinutes: toInt(src.kickAfterMinutes, 0, 0, 10080),
+        kickAfterMinutes: toInt(
+          src.kickAfterMinutes,
+          defaults.kickAfterMinutes,
+          0,
+          10080,
+        ),
         title: clampOptionalText(src.title, 120),
         description: clampOptionalText(src.description, 500),
         buttonLabel: clampOptionalText(src.buttonLabel, 80),
@@ -498,11 +536,11 @@ function cleanFeatureValue(name, raw, sanitizeId) {
         openEmoji:
           typeof src.openEmoji === "string" && src.openEmoji.trim()
             ? src.openEmoji.trim().slice(0, 64)
-            : FEATURE_DEFAULTS.tickets.openEmoji,
+            : defaults.openEmoji,
         closeEmoji:
           typeof src.closeEmoji === "string" && src.closeEmoji.trim()
             ? src.closeEmoji.trim().slice(0, 64)
-            : FEATURE_DEFAULTS.tickets.closeEmoji,
+            : defaults.closeEmoji,
         panelTitle: clampOptionalText(src.panelTitle, 120),
         panelDescription: clampOptionalText(src.panelDescription, 500),
         alreadyOpenMessage: clampOptionalText(src.alreadyOpenMessage, 300),
@@ -515,8 +553,8 @@ function cleanFeatureValue(name, raw, sanitizeId) {
         enabled: toBool(src.enabled),
         channelId: id(src.channelId),
         message: clampOptionalText(src.message, 500),
-        embed: src.embed === undefined ? true : toBool(src.embed),
-        color: normalizeColor(src.color, FEATURE_DEFAULTS.welcome.color),
+        embed: src.embed === undefined ? defaults.embed : toBool(src.embed),
+        color: normalizeColor(src.color, defaults.color),
         bannerUrl: urlOrNull(src.bannerUrl, 512),
       };
 
@@ -525,8 +563,8 @@ function cleanFeatureValue(name, raw, sanitizeId) {
         enabled: toBool(src.enabled),
         channelId: id(src.channelId),
         message: clampOptionalText(src.message, 500),
-        embed: src.embed === undefined ? true : toBool(src.embed),
-        color: normalizeColor(src.color, FEATURE_DEFAULTS.goodbye.color),
+        embed: src.embed === undefined ? defaults.embed : toBool(src.embed),
+        color: normalizeColor(src.color, defaults.color),
         bannerUrl: urlOrNull(src.bannerUrl, 512),
       };
 
@@ -534,10 +572,15 @@ function cleanFeatureValue(name, raw, sanitizeId) {
       return {
         enabled: toBool(src.enabled),
         showMembers:
-          src.showMembers === undefined ? true : toBool(src.showMembers),
-        showJoins: src.showJoins === undefined ? true : toBool(src.showJoins),
+          src.showMembers === undefined
+            ? defaults.showMembers
+            : toBool(src.showMembers),
+        showJoins:
+          src.showJoins === undefined ? defaults.showJoins : toBool(src.showJoins),
         showLeaves:
-          src.showLeaves === undefined ? true : toBool(src.showLeaves),
+          src.showLeaves === undefined
+            ? defaults.showLeaves
+            : toBool(src.showLeaves),
         categoryId: id(src.categoryId),
         memberChannelId: id(src.memberChannelId),
         joinsChannelId: id(src.joinsChannelId),
@@ -551,7 +594,12 @@ function cleanFeatureValue(name, raw, sanitizeId) {
       return {
         enabled: toBool(src.enabled),
         channelId: id(src.channelId),
-        intervalMinutes: toInt(src.intervalMinutes, 60, 15, 1440),
+        intervalMinutes: toInt(
+          src.intervalMinutes,
+          defaults.intervalMinutes,
+          15,
+          1440,
+        ),
       };
 
     case "twitch": {
@@ -785,6 +833,16 @@ function registerFeaturesRoutes({
           return res
             .status(400)
             .json({ ok: false, error: "INVALID_FEATURE_VALUE" });
+        if (value.enabled) {
+          const setupIssues = getFeatureSetupIssues(feature, value);
+          if (setupIssues.length) {
+            return res.status(400).json({
+              ok: false,
+              error: "FEATURE_CONFIGURATION_INCOMPLETE",
+              issues: setupIssues,
+            });
+          }
+        }
 
         const client = typeof getClient === "function" ? getClient() : null;
 

@@ -99,10 +99,10 @@ const guildConfigSchema = new Schema(
     // Funcionalidades opcionais (tab "Funcionalidades" da dashboard).
     // Cada bloco tem um interruptor `enabled` independente.
     features: {
-      // Optional per-server AutoMod rules; null inherits global defaults.
+      // Per-server AutoMod rules; defaults come from featuresService and do not inherit global word lists.
       autoModeration: { type: Schema.Types.Mixed, default: null },
 
-      // Optional anti-spam overrides; defaults are resolved from global config.
+      // Per-server anti-spam config; normalized by featuresService and disabled by default.
       antiSpam: { type: Schema.Types.Mixed, default: null },
 
       // Logs de mensagens editadas/apagadas
