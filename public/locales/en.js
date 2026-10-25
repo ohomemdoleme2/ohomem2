@@ -1194,7 +1194,7 @@ window.OzarkLocales.en = {
   features_test_send_confirm:
     "This will save the current settings and send a visible test message to the configured Discord channel. Continue?",
   features_test_reaction_roles_confirm:
-    "This will save the current settings and add missing reactions to the configured panel. Members who react may receive configured roles. Continue?",
+    "This saves the current settings and adds any missing reactions to the configured panel. Members who react may receive the configured roles. Continue?",
   features_test_stats_confirm:
     "This will save the current settings and update the configured server statistics channels in Discord. Continue?",
   features_leave_unsaved_confirm:

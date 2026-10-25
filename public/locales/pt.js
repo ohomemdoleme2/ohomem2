@@ -1226,7 +1226,7 @@ window.OzarkLocales.pt = {
   features_test_send_confirm:
     "A configuração atual será guardada e será enviada uma mensagem de teste visível para o canal Discord configurado. Continuar?",
   features_test_reaction_roles_confirm:
-    "A configuração atual será guardada e serão adicionadas as reações em falta ao painel configurado. Quem reagir poderá receber os cargos configurados. Continuar?",
+    "Guarda a configuração atual e adiciona as reações em falta ao painel configurado. Quem reagir poderá receber os cargos configurados. Continuar?",
   features_test_stats_confirm:
     "A configuração atual será guardada e os canais de estatísticas serão atualizados no Discord. Continuar?",
   features_leave_unsaved_confirm:
